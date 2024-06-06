@@ -1,0 +1,27 @@
+{
+  "config": {
+    "error": {
+      "invalid_auth": "Échec de l'authentification.",
+      "invalid_url": "L'URL fournie est invalide.",
+      "unknown": "Une erreur inconnue s'est produite."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "password": "Mot de passe",
+          "scan_interval": "Intervalle de balayage (secondes)",
+          "username": "Nom d'utilisateur",
+          "water_test_url": "URL du test de l'eau"
+        },
+        "description": "Configurez votre intégration Leslie's Pool.",
+        "description_placeholders": {
+          "password": "Entrez votre mot de passe",
+          "scan_interval": "300",
+          "username": "Entrez votre nom d'utilisateur",
+          "water_test_url": "https://lesliespool.com/on/demandware.store/Sites-lpm_site-Site/en_US/WaterTest-Landing?poolProfileId=XXXX&poolName=XXXX"
+        },
+        "title": "Tests de l'eau de Leslie's Pool"
+      }
+    }
+  }
+}

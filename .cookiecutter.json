@@ -1,0 +1,13 @@
+{
+  "_checkout": "2021.1.1",
+  "_output_dir": "/home/cgallopo",
+  "_repo_dir": "/home/cgallopo/.cookiecutters/cookiecutter-homeassistant-custom-component",
+  "_template": "gh:oncleben31/cookiecutter-homeassistant-custom-component",
+  "class_name_prefix": "LesliesPool",
+  "domain_name": "leslies_pool",
+  "friendly_name": "leslies_pool",
+  "github_user": "connorgallopo",
+  "project_name": "leslies-pool",
+  "test_suite": "yes",
+  "version": "0.0.0"
+}

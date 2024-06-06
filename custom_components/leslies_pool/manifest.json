@@ -1,0 +1,10 @@
+{
+  "domain": "leslies_pool",
+  "name": "Leslie's Pool Water Tests",
+  "documentation": "https://github.com/connorgallopo/leslies-pool",
+  "issue_tracker": "https://github.com/connorgallopo/leslies-pool/issues",
+  "dependencies": [],
+  "config_flow": true,
+  "codeowners": ["@connorgallopo"],
+  "requirements": ["beautifulsoup4==4.12.3", "requests==2.31.0"]
+}
