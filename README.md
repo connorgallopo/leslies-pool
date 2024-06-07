@@ -1,4 +1,4 @@
-# leslies_pool
+# Leslies Pool Water Test Results
 
 [![GitHub Release][releases-shield]][releases]
 [![GitHub Activity][commits-shield]][commits]
@@ -14,20 +14,35 @@
 [![Discord][discord-shield]][discord]
 [![Community Forum][forum-shield]][forum]
 
-**TO BE REMOVED: If you need help, as a developer, to use this custom component tempalte,
-please look at the [User Guide in the Cookiecutter documentation](https://cookiecutter-homeassistant-custom-component.readthedocs.io/en/stable/quickstart.html)**
+**This integration leverages Leslie's Pools chemical results internal API to get those results and expose them to HomeAssistant. This will fetch data for both Leslies in-store tests as well as the test results from the AccuBlue home tester.**
 
 **This component will set up the following platforms.**
 
 | Platform        | Description                                                               |
 | --------------- | ------------------------------------------------------------------------- |
-| `binary_sensor` | Show something `True` or `False`.                                         |
-| `sensor`        | Show info from leslies_pool API. |
-| `switch`        | Switch something `True` or `False`.                                       |
+| `sensor`        | Show info from leslies_pool API.                                          |
 
-![example][exampleimg]
+**The component will set up the following sensors:**
+- Free Chlorine - PPM
+- Total Chlorine - PPM
+- PH - pH
+- Alkalinity - PPM
+- Calcium - PPM
+- Cyanuric Acid - PPM
+- Iron - PPM
+- Copper - PPM
+- Phosphates - PPB
+- Salt - PPM
 
-## Installation
+
+## Installation - Automatic (REQUIRES HACS)
+
+1. Add this repository URL to HACS custom repositories as an Integration
+2. Search for "Leslies" and install the integration
+3. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "leslies_pool"
+4. Follow config flow
+
+## Installation - Manaul
 
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
 2. If you do not have a `custom_components` directory (folder) there, you need to create it.
@@ -37,29 +52,10 @@ please look at the [User Guide in the Cookiecutter documentation](https://cookie
 6. Restart Home Assistant
 7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "leslies_pool"
 
-Using your HA configuration directory (folder) as a starting point you should now also have this:
-
-```text
-custom_components/leslies_pool/translations/en.json
-custom_components/leslies_pool/translations/fr.json
-custom_components/leslies_pool/translations/nb.json
-custom_components/leslies_pool/translations/sensor.en.json
-custom_components/leslies_pool/translations/sensor.fr.json
-custom_components/leslies_pool/translations/sensor.nb.json
-custom_components/leslies_pool/translations/sensor.nb.json
-custom_components/leslies_pool/__init__.py
-custom_components/leslies_pool/api.py
-custom_components/leslies_pool/binary_sensor.py
-custom_components/leslies_pool/config_flow.py
-custom_components/leslies_pool/const.py
-custom_components/leslies_pool/manifest.json
-custom_components/leslies_pool/sensor.py
-custom_components/leslies_pool/switch.py
-```
-
-## Configuration is done in the UI
-
-<!---->
+## Setup
+1. Provide the Username and Password for your leslie's account. These are used to auth and refresh cookies
+2. Input the Water Test URL. This can be found by navigating [here](https://lesliespool.com/on/demandware.store/Sites-lpm_site-Site/en_US/PoolProfile-Landing) once logged in, and then by clicking on "Water Tests" for the pool you want to integrate. The water test URL can be copied from the URL bar once you have navigated there. This URL contains the Pool ID and Pool Name which are needed to make the API calls to fetch the data.
+3. Set a polling rate (Seconds).
 
 ## Contributions are welcome!
 
