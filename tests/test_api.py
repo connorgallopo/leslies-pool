@@ -1,87 +1,96 @@
-"""Tests for leslies_pool api."""
+"""Test the API for Leslie's Pool Water Tests."""
 
-import asyncio
+import unittest
+from unittest.mock import MagicMock, patch
 
-import aiohttp
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-from custom_components.leslies_pool.api import LesliesPoolApiClient
+from homeassistant.components.leslies_pool.api import LesliesPoolApi
 
 
-async def test_api(hass, aioclient_mock, caplog):
-    """Test API calls."""
+class TestLesliesPoolApi(unittest.TestCase):
+    """Test the Leslie's Pool API."""
 
-    # To test the api submodule, we first create an instance of our API client
-    api = LesliesPoolApiClient("test", "test", async_get_clientsession(hass))
+    def setUp(self):
+        """Set up the test."""
+        self.api = LesliesPoolApi("testuser", "testpassword", "123456", "TestPool")
 
-    # Use aioclient_mock which is provided by `pytest_homeassistant_custom_components`
-    # to mock responses to aiohttp requests. In this case we are telling the mock to
-    # return {"test": "test"} when a `GET` call is made to the specified URL. We then
-    # call `async_get_data` which will make that `GET` request.
-    aioclient_mock.get(
-        "https://jsonplaceholder.typicode.com/posts/1", json={"test": "test"}
-    )
-    assert await api.async_get_data() == {"test": "test"}
+    @patch("homeassistant.components.leslies_pool.api.requests.Session.get")
+    @patch("homeassistant.components.leslies_pool.api.requests.Session.post")
+    def test_authenticate_success(self, mock_post, mock_get):
+        """Test successful authentication."""
+        login_page_html = '<input name="csrf_token" value="test_csrf_token">'
+        mock_get.return_value = MagicMock(status_code=200, text=login_page_html)
+        mock_post.return_value = MagicMock(status_code=200)
 
-    # We do the same for `async_set_title`. Note the difference in the mock call
-    # between the previous step and this one. We use `patch` here instead of `get`
-    # because we know that `async_set_title` calls `api_wrapper` with `patch` as the
-    # first parameter
-    aioclient_mock.patch("https://jsonplaceholder.typicode.com/posts/1")
-    assert await api.async_set_title("test") is None
+        result = self.api.authenticate()
 
-    # In order to get 100% coverage, we need to test `api_wrapper` to test the code
-    # that isn't already called by `async_get_data` and `async_set_title`. Because the
-    # only logic that lives inside `api_wrapper` that is not being handled by a third
-    # party library (aiohttp) is the exception handling, we also want to simulate
-    # raising the exceptions to ensure that the function handles them as expected.
-    # The caplog fixture allows access to log messages in tests. This is particularly
-    # useful during exception handling testing since often the only action as part of
-    # exception handling is a logging statement
-    caplog.clear()
-    aioclient_mock.put(
-        "https://jsonplaceholder.typicode.com/posts/1", exc=asyncio.TimeoutError
-    )
-    assert (
-        await api.api_wrapper("put", "https://jsonplaceholder.typicode.com/posts/1")
-        is None
-    )
-    assert (
-        len(caplog.record_tuples) == 1
-        and "Timeout error fetching information from" in caplog.record_tuples[0][2]
-    )
+        assert result
+        mock_get.assert_called_once_with(self.api.LOGIN_PAGE_URL)
+        mock_post.assert_called_once_with(
+            self.api.LOGIN_URL,
+            headers={
+                "accept": "application/json, text/javascript, */*; q=0.01",
+                "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "user-agent": "Mozilla/5.0",
+            },
+            data={
+                "loginEmail": "testuser",
+                "loginPassword": "testpassword",
+                "csrf_token": "test_csrf_token",
+            },
+        )
 
-    caplog.clear()
-    aioclient_mock.post(
-        "https://jsonplaceholder.typicode.com/posts/1", exc=aiohttp.ClientError
-    )
-    assert (
-        await api.api_wrapper("post", "https://jsonplaceholder.typicode.com/posts/1")
-        is None
-    )
-    assert (
-        len(caplog.record_tuples) == 1
-        and "Error fetching information from" in caplog.record_tuples[0][2]
-    )
+    @patch("homeassistant.components.leslies_pool.api.requests.Session.get")
+    @patch("homeassistant.components.leslies_pool.api.requests.Session.post")
+    def test_authenticate_fail(self, mock_post, mock_get):
+        """Test failed authentication."""
+        login_page_html = '<input name="csrf_token" value="test_csrf_token">'
+        mock_get.return_value = MagicMock(status_code=200, text=login_page_html)
+        mock_post.return_value = MagicMock(status_code=401)
 
-    caplog.clear()
-    aioclient_mock.post("https://jsonplaceholder.typicode.com/posts/2", exc=Exception)
-    assert (
-        await api.api_wrapper("post", "https://jsonplaceholder.typicode.com/posts/2")
-        is None
-    )
-    assert (
-        len(caplog.record_tuples) == 1
-        and "Something really wrong happened!" in caplog.record_tuples[0][2]
-    )
+        result = self.api.authenticate()
 
-    caplog.clear()
-    aioclient_mock.post("https://jsonplaceholder.typicode.com/posts/3", exc=TypeError)
-    assert (
-        await api.api_wrapper("post", "https://jsonplaceholder.typicode.com/posts/3")
-        is None
-    )
-    assert (
-        len(caplog.record_tuples) == 1
-        and "Error parsing information from" in caplog.record_tuples[0][2]
-    )
+        assert not result
+
+    @patch("homeassistant.components.leslies_pool.api.requests.Session.get")
+    @patch("homeassistant.components.leslies_pool.api.requests.Session.post")
+    def test_fetch_water_test_data(self, mock_post, mock_get):
+        """Test fetching water test data."""
+        # Mock the response for the landing page request
+        mock_get.return_value = MagicMock(status_code=200)
+
+        # Mock the response for the water test data request
+        water_test_html = """
+        <table class="table table-striped table-bordered table-hover table-sm">
+            <tbody>
+                <tr>
+                    <td>Test</td>
+                    <td>1.0</td>
+                    <td>2.0</td>
+                    <td>7.0</td>
+                    <td>80</td>
+                    <td>200</td>
+                    <td>30</td>
+                    <td>0.1</td>
+                    <td>0.2</td>
+                    <td>300</td>
+                    <td>4000</td>
+                </tr>
+            </tbody>
+        </table>
+        """
+        mock_post.return_value = MagicMock(
+            status_code=200, json=MagicMock(return_value={"response": water_test_html})
+        )
+
+        data = self.api.fetch_water_test_data()
+
+        assert data["free_chlorine"] == "1.0"
+        assert data["total_chlorine"] == "2.0"
+        assert data["ph"] == "7.0"
+        assert data["alkalinity"] == "80"
+        assert data["calcium"] == "200"
+        assert data["cyanuric_acid"] == "30"
+        assert data["iron"] == "0.1"
+        assert data["copper"] == "0.2"
+        assert data["phosphates"] == "300"
+        assert data["salt"] == "4000"

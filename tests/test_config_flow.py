@@ -1,113 +1,211 @@
-"""Test leslies_pool config flow."""
+"""Test the Leslie's Pool Water Tests config flow."""
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
-from homeassistant import config_entries, data_entry_flow
-import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-from custom_components.leslies_pool.const import (
-    BINARY_SENSOR,
-    DOMAIN,
-    PLATFORMS,
-    SENSOR,
-    SWITCH,
+from homeassistant import config_entries
+from homeassistant.components.leslies_pool.config_flow import (
+    CannotConnect,
+    InvalidAuth,
+    InvalidURL,
 )
+from homeassistant.components.leslies_pool.const import DOMAIN
+from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 
-from .const import MOCK_CONFIG
+WATER_TEST_URL = "https://lesliespool.com/on/demandware.store/Sites-lpm_site-Site/en_US/WaterTest-Landing?poolProfileId=5891278&poolName=Pool"
 
 
-# This fixture bypasses the actual setup of the integration
-# since we only want to test the config flow. We test the
-# actual functionality of the integration in other test modules.
-@pytest.fixture(autouse=True)
-def bypass_setup_fixture():
-    """Prevent setup."""
+async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
+    """Test we get the form."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {}
+
     with patch(
-        "custom_components.leslies_pool.async_setup",
-        return_value=True,
-    ), patch(
-        "custom_components.leslies_pool.async_setup_entry",
+        "homeassistant.components.leslies_pool.api.LesliesPoolApi.authenticate",
         return_value=True,
     ):
-        yield
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_USERNAME: "test-username",
+                CONF_PASSWORD: "test-password",
+                "water_test_url": WATER_TEST_URL,
+                CONF_SCAN_INTERVAL: 300,
+            },
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Leslie's Pool"
+    assert result["data"] == {
+        "title": "Leslie's Pool",
+        "username": "test-username",
+        "password": "test-password",
+        "pool_profile_id": "5891278",
+        "pool_name": "Pool",
+        "scan_interval": 300,
+    }
+    assert len(mock_setup_entry.mock_calls) == 1
 
 
-# Here we simiulate a successful config flow from the backend.
-# Note that we use the `bypass_get_data` fixture here because
-# we want the config flow validation to succeed during the test.
-async def test_successful_config_flow(hass, bypass_get_data):
-    """Test a successful config flow."""
-    # Initialize a config flow
+async def test_form_invalid_auth(
+    hass: HomeAssistant, mock_setup_entry: AsyncMock
+) -> None:
+    """Test we handle invalid auth."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    # Check that the config flow shows the user form as the first step
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
-    assert result["step_id"] == "user"
+    with patch(
+        "homeassistant.components.leslies_pool.api.LesliesPoolApi.authenticate",
+        side_effect=InvalidAuth,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_USERNAME: "test-username",
+                CONF_PASSWORD: "test-password",
+                "water_test_url": WATER_TEST_URL,
+                CONF_SCAN_INTERVAL: 300,
+            },
+        )
 
-    # If a user were to enter `test_username` for username and `test_password`
-    # for password, it would result in this function call
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], user_input=MOCK_CONFIG
-    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {"base": "invalid_auth"}
 
-    # Check that the config flow is complete and a new entry is created with
-    # the input data
-    assert result["type"] == data_entry_flow.RESULT_TYPE_CREATE_ENTRY
-    assert result["title"] == "test_username"
-    assert result["data"] == MOCK_CONFIG
-    assert result["result"]
+    with patch(
+        "homeassistant.components.leslies_pool.api.LesliesPoolApi.authenticate",
+        return_value=True,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_USERNAME: "test-username",
+                CONF_PASSWORD: "test-password",
+                "water_test_url": WATER_TEST_URL,
+                CONF_SCAN_INTERVAL: 300,
+            },
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Leslie's Pool"
+    assert result["data"] == {
+        "title": "Leslie's Pool",
+        "username": "test-username",
+        "password": "test-password",
+        "pool_profile_id": "5891278",
+        "pool_name": "Pool",
+        "scan_interval": 300,
+    }
+    assert len(mock_setup_entry.mock_calls) == 1
 
 
-# In this case, we want to simulate a failure during the config flow.
-# We use the `error_on_get_data` mock instead of `bypass_get_data`
-# (note the function parameters) to raise an Exception during
-# validation of the input config.
-async def test_failed_config_flow(hass, error_on_get_data):
-    """Test a failed config flow due to credential validation failure."""
-
+async def test_form_cannot_connect(
+    hass: HomeAssistant, mock_setup_entry: AsyncMock
+) -> None:
+    """Test we handle cannot connect error."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
-    assert result["step_id"] == "user"
+    with patch(
+        "homeassistant.components.leslies_pool.api.LesliesPoolApi.authenticate",
+        side_effect=CannotConnect,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_USERNAME: "test-username",
+                CONF_PASSWORD: "test-password",
+                "water_test_url": WATER_TEST_URL,
+                CONF_SCAN_INTERVAL: 300,
+            },
+        )
 
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], user_input=MOCK_CONFIG
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {"base": "cannot_connect"}
+
+    with patch(
+        "homeassistant.components.leslies_pool.api.LesliesPoolApi.authenticate",
+        return_value=True,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_USERNAME: "test-username",
+                CONF_PASSWORD: "test-password",
+                "water_test_url": WATER_TEST_URL,
+                CONF_SCAN_INTERVAL: 300,
+            },
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Leslie's Pool"
+    assert result["data"] == {
+        "title": "Leslie's Pool",
+        "username": "test-username",
+        "password": "test-password",
+        "pool_profile_id": "5891278",
+        "pool_name": "Pool",
+        "scan_interval": 300,
+    }
+    assert len(mock_setup_entry.mock_calls) == 1
+
+
+async def test_form_invalid_url(
+    hass: HomeAssistant, mock_setup_entry: AsyncMock
+) -> None:
+    """Test we handle invalid URL error."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
-    assert result["errors"] == {"base": "auth"}
+    with patch(
+        "homeassistant.components.leslies_pool.api.LesliesPoolApi.authenticate",
+        side_effect=InvalidURL,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_USERNAME: "test-username",
+                CONF_PASSWORD: "test-password",
+                "water_test_url": "invalid-url",
+                CONF_SCAN_INTERVAL: 300,
+            },
+        )
 
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {"base": "invalid_url"}
 
-# Our config flow also has an options flow, so we must test it as well.
-async def test_options_flow(hass):
-    """Test an options flow."""
-    # Create a new MockConfigEntry and add to HASS (we're bypassing config
-    # flow entirely)
-    entry = MockConfigEntry(domain=DOMAIN, data=MOCK_CONFIG, entry_id="test")
-    entry.add_to_hass(hass)
+    with patch(
+        "homeassistant.components.leslies_pool.api.LesliesPoolApi.authenticate",
+        return_value=True,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_USERNAME: "test-username",
+                CONF_PASSWORD: "test-password",
+                "water_test_url": WATER_TEST_URL,
+                CONF_SCAN_INTERVAL: 300,
+            },
+        )
+        await hass.async_block_till_done()
 
-    # Initialize an options flow
-    await hass.config_entries.async_setup(entry.entry_id)
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-
-    # Verify that the first options step is a user form
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
-    assert result["step_id"] == "user"
-
-    # Enter some fake data into the form
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        user_input={platform: platform != SENSOR for platform in PLATFORMS},
-    )
-
-    # Verify that the flow finishes
-    assert result["type"] == data_entry_flow.RESULT_TYPE_CREATE_ENTRY
-    assert result["title"] == "test_username"
-
-    # Verify that the options were updated
-    assert entry.options == {BINARY_SENSOR: True, SENSOR: False, SWITCH: True}
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Leslie's Pool"
+    assert result["data"] == {
+        "title": "Leslie's Pool",
+        "username": "test-username",
+        "password": "test-password",
+        "pool_profile_id": "5891278",
+        "pool_name": "Pool",
+        "scan_interval": 300,
+    }
+    assert len(mock_setup_entry.mock_calls) == 1
