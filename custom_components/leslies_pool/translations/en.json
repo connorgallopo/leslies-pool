@@ -1,27 +1,21 @@
 {
   "config": {
-      "error": {
-          "invalid_auth": "Authentication failed.",
-          "invalid_url": "The provided URL is invalid.",
-          "unknown": "An unknown error occurred."
-      },
-      "step": {
-          "user": {
-              "data": {
-                  "password": "Password",
-                  "scan_interval": "Polling Interval (seconds)",
-                  "username": "Username",
-                  "water_test_url": "Water Test URL"
-              },
-              "description": "Set up your Leslie's Pool integration.",
-              "description_placeholders": {
-                  "password": "Enter your password",
-                  "scan_interval": "300",
-                  "username": "Enter your username",
-                  "water_test_url": "https://lesliespool.com/on/demandware.store/Sites-lpm_site-Site/en_US/WaterTest-Landing?poolProfileId=XXXX&poolName=XXXX"
-              },
-              "title": "Leslie's Pool Water Tests"
-          }
+    "error": {
+      "invalid_auth": "Authentication failed.",
+      "invalid_url": "The provided URL is invalid.",
+      "unknown": "An unknown error occurred."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "password": "Password",
+          "scan_interval": "Polling Interval (seconds)",
+          "username": "Username",
+          "water_test_url": "Water Test URL"
+        },
+        "description": "Set up your Leslie's Pool integration.",
+        "title": "Leslie's Pool Water Tests"
       }
+    }
   }
 }

@@ -13,13 +13,6 @@
           "username": "Brukernavn",
           "water_test_url": "Vanntest-URL"
         },
-        "description": "Konfigurer din Leslie's Pool-integrasjon.",
-        "description_placeholders": {
-          "password": "Skriv inn ditt passord",
-          "scan_interval": "300",
-          "username": "Skriv inn ditt brukernavn",
-          "water_test_url": "https://lesliespool.com/on/demandware.store/Sites-lpm_site-Site/en_US/WaterTest-Landing?poolProfileId=XXXX&poolName=XXXX"
-        },
         "title": "Leslie's Pool Vanntester"
       }
     }

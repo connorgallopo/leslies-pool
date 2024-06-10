@@ -1,1 +1,1 @@
-"""Tests for leslies_pool integration."""
+"""Tests for the Leslie's Pool Water Tests integration."""
