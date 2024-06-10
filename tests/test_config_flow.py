@@ -1,15 +1,15 @@
 """Test the Leslie's Pool Water Tests config flow."""
-
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import patch
 
 from homeassistant import config_entries
-from homeassistant.components.leslies_pool.config_flow import (
-    CannotConnect,
-    InvalidAuth,
-    InvalidURL,
-)
+from homeassistant.components.leslies_pool.config_flow import CannotConnect
+from homeassistant.components.leslies_pool.config_flow import InvalidAuth
+from homeassistant.components.leslies_pool.config_flow import InvalidURL
 from homeassistant.components.leslies_pool.const import DOMAIN
-from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
+from homeassistant.const import CONF_PASSWORD
+from homeassistant.const import CONF_SCAN_INTERVAL
+from homeassistant.const import CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 

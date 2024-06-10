@@ -1,7 +1,7 @@
 """Test the API for Leslie's Pool Water Tests."""
-
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 from homeassistant.components.leslies_pool.api import LesliesPoolApi
 

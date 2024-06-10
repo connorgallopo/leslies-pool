@@ -1,7 +1,7 @@
 """API client for Leslie's Pool Water Tests."""
-
-from bs4 import BeautifulSoup, Tag
 import requests
+from bs4 import BeautifulSoup
+from bs4 import Tag
 
 
 class LesliesPoolApi:

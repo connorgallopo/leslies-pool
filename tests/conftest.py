@@ -1,7 +1,7 @@
 """Common fixtures for the Leslie's Pool Water Tests tests."""
-
 from collections.abc import Generator
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import patch
 
 import pytest
 

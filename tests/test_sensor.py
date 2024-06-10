@@ -1,16 +1,13 @@
 """Test the Leslie's Pool Water Tests sensors."""
-
-from datetime import timedelta
 import logging
-from unittest.mock import AsyncMock, patch
+from datetime import timedelta
+from unittest.mock import AsyncMock
+from unittest.mock import patch
 
 import pytest
-
 from homeassistant.components.leslies_pool.const import DOMAIN
-from homeassistant.components.leslies_pool.sensor import (
-    LesliesPoolSensor,
-    async_setup_entry,
-)
+from homeassistant.components.leslies_pool.sensor import async_setup_entry
+from homeassistant.components.leslies_pool.sensor import LesliesPoolSensor
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
