@@ -1,12 +1,12 @@
 {
   "domain": "leslies_pool",
   "name": "Leslie's Pool Water Tests",
-  "documentation": "https://github.com/connorgallopo/leslies-pool",
-  "issue_tracker": "https://github.com/connorgallopo/leslies-pool/issues",
-  "dependencies": [],
-  "config_flow": true,
   "codeowners": ["@connorgallopo"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/connorgallopo/leslies-pool",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/connorgallopo/leslies-pool/issues",
   "requirements": ["beautifulsoup4==4.12.3", "requests==2.31.0"],
-  "version": "1.0.0",
-  "iot_class": "cloud_polling"
+  "version": "1.0.0"
 }
