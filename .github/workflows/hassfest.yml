@@ -1,18 +1,14 @@
-name: Run HassFest
+name: Validate with hassfest
 
 on:
+  push:
   pull_request:
-    paths:
-      - "homeassistant/**"
-      - ".github/workflows/hassfest.yml"
+  schedule:
+    - cron:  '0 0 * * *'
 
 jobs:
-  hassfest:
-    runs-on: ubuntu-latest
-
+  validate:
+    runs-on: "ubuntu-latest"
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Run HassFest
-        uses: home-assistant/actions/hassfest@main
+        - uses: "actions/checkout@v4"
+        - uses: "home-assistant/actions/hassfest@master"
