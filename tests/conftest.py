@@ -1,4 +1,5 @@
 """Global fixtures for leslies_pool integration."""
+
 from unittest.mock import patch
 
 import pytest

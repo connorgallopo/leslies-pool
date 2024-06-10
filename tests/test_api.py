@@ -1,11 +1,11 @@
 """Tests for leslies_pool api."""
+
 import asyncio
 
 import aiohttp
-from custom_components.leslies_pool.api import (
-    LesliesPoolApiClient,
-)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+from custom_components.leslies_pool.api import LesliesPoolApiClient
 
 
 async def test_api(hass, aioclient_mock, caplog):

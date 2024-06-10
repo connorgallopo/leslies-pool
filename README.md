@@ -18,11 +18,12 @@
 
 **This component will set up the following platforms.**
 
-| Platform        | Description                                                               |
-| --------------- | ------------------------------------------------------------------------- |
-| `sensor`        | Show info from leslies_pool API.                                          |
+| Platform | Description                      |
+| -------- | -------------------------------- |
+| `sensor` | Show info from leslies_pool API. |
 
 **The component will set up the following sensors:**
+
 - Free Chlorine - PPM
 - Total Chlorine - PPM
 - PH - pH
@@ -33,7 +34,6 @@
 - Copper - PPM
 - Phosphates - PPB
 - Salt - PPM
-
 
 ## Installation - Automatic (REQUIRES HACS)
 
@@ -53,6 +53,7 @@
 7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "leslies_pool"
 
 ## Setup
+
 1. Provide the Username and Password for your leslie's account. These are used to auth and refresh cookies
 2. Input the Water Test URL. This can be found by navigating [here](https://lesliespool.com/on/demandware.store/Sites-lpm_site-Site/en_US/PoolProfile-Landing) once logged in, and then by clicking on "Water Tests" for the pool you want to integrate. The water test URL can be copied from the URL bar once you have navigated there. This URL contains the Pool ID and Pool Name which are needed to make the API calls to fetch the data.
 3. Set a polling rate (Seconds).

@@ -1,25 +1,18 @@
 """Test leslies_pool config flow."""
+
 from unittest.mock import patch
 
+from homeassistant import config_entries, data_entry_flow
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
 from custom_components.leslies_pool.const import (
     BINARY_SENSOR,
-)
-from custom_components.leslies_pool.const import (
     DOMAIN,
-)
-from custom_components.leslies_pool.const import (
     PLATFORMS,
-)
-from custom_components.leslies_pool.const import (
     SENSOR,
-)
-from custom_components.leslies_pool.const import (
     SWITCH,
 )
-from homeassistant import config_entries
-from homeassistant import data_entry_flow
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from .const import MOCK_CONFIG
 
@@ -30,7 +23,10 @@ from .const import MOCK_CONFIG
 @pytest.fixture(autouse=True)
 def bypass_setup_fixture():
     """Prevent setup."""
-    with patch("custom_components.leslies_pool.async_setup", return_value=True,), patch(
+    with patch(
+        "custom_components.leslies_pool.async_setup",
+        return_value=True,
+    ), patch(
         "custom_components.leslies_pool.async_setup_entry",
         return_value=True,
     ):

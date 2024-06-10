@@ -6,12 +6,11 @@ import logging
 import re
 from typing import Any
 
-import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+import voluptuous as vol
 
 from .api import LesliesPoolApi
 from .const import DOMAIN
