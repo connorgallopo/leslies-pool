@@ -2,4 +2,4 @@ homeassistant==2024.6.4
 beautifulsoup4==4.12.3
 requests
 black==22.3.0
-click==8.0.4
+click==8.1.7
