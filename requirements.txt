@@ -1,4 +1,4 @@
-homeassistant==2024.9.3
+homeassistant==2024.12.5
 beautifulsoup4==4.12.3
 requests
 black==24.8.0
