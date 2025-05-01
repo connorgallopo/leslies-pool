@@ -1,6 +1,6 @@
 """Sensor platform for Leslie's Pool Water Tests."""
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import requests
 from homeassistant.components.sensor import SensorEntity
@@ -17,16 +17,17 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 SENSOR_TYPES = {
-    "free_chlorine": ("Free Chlorine", "ppm"),
-    "total_chlorine": ("Total Chlorine", "ppm"),
-    "ph": ("pH", "pH"),
-    "alkalinity": ("Total Alkalinity", "ppm"),
-    "calcium": ("Calcium Hardness", "ppm"),
-    "cyanuric_acid": ("Cyanuric Acid", "ppm"),
-    "iron": ("Iron", "ppm"),
-    "copper": ("Copper", "ppm"),
-    "phosphates": ("Phosphates", "ppb"),
-    "salt": ("Salt", "ppm"),
+    "free_chlorine": ("Leslie's Free Chlorine", "ppm"),
+    "total_chlorine": ("Leslie's Total Chlorine", "ppm"),
+    "ph": ("Leslie's pH", "pH"),
+    "alkalinity": ("Leslie's Total Alkalinity", "ppm"),
+    "calcium": ("Leslie's Calcium Hardness", "ppm"),
+    "cyanuric_acid": ("Leslie's Cyanuric Acid", "ppm"),
+    "iron": ("Leslie's Iron", "ppm"),
+    "copper": ("Leslie's Copper", "ppm"),
+    "phosphates": ("Leslie's Phosphates", "ppb"),
+    "salt": ("Leslie's Salt", "ppm"),
+    "last_tested": ("Leslie's Last Tested", None),  # New sensor for last tested
 }
 
 
@@ -41,7 +42,9 @@ async def async_setup_entry(
     async def async_update_data():
         """Fetch data from API endpoint."""
         try:
-            return await hass.async_add_executor_job(api.fetch_water_test_data)
+            data = await hass.async_add_executor_job(api.fetch_water_test_data)
+            data["last_tested"] = datetime.now().isoformat()  # Add timestamp
+            return data
         except requests.RequestException as err:
             raise UpdateFailed(f"Error fetching data: {err}") from err
 
@@ -77,7 +80,7 @@ class LesliesPoolSensor(SensorEntity):
     @property
     def unique_id(self):
         """Return a unique ID for this sensor."""
-        return f"{self.config_entry.entry_id}_{self._sensor_type}"
+        return f"{self.config_entry.entry_id}_leslies_{self._sensor_type}"
 
     @property
     def name(self):
