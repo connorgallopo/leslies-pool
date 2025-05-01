@@ -24,16 +24,16 @@
 
 **The component will set up the following sensors:**
 
-- Free Chlorine - PPM
-- Total Chlorine - PPM
-- PH - pH
-- Alkalinity - PPM
-- Calcium - PPM
-- Cyanuric Acid - PPM
-- Iron - PPM
-- Copper - PPM
-- Phosphates - PPB
-- Salt - PPM
+- Leslies Free Chlorine - PPM
+- Leslies Total Chlorine - PPM
+- Leslies PH - pH
+- Leslies Alkalinity - PPM
+- Leslies Calcium - PPM
+- Leslies Cyanuric Acid - PPM
+- Leslies Iron - PPM
+- Leslies Copper - PPM
+- Leslies Phosphates - PPB
+- Leslies Salt - PPM
 
 ## Installation - Automatic (REQUIRES HACS)
 
