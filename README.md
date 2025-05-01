@@ -34,6 +34,8 @@
 - Leslies Copper - PPM
 - Leslies Phosphates - PPB
 - Leslies Salt - PPM
+- Leslies Last Tested - Date
+- Leslies In Store - True/False
 
 ## Installation - Automatic (REQUIRES HACS)
 
