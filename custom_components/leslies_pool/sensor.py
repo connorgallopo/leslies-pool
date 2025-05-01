@@ -28,7 +28,7 @@ SENSOR_TYPES = {
     "copper": ("Leslies Copper", "ppm"),
     "phosphates": ("Leslies Phosphates", "ppb"),
     "salt": ("Leslies Salt", "ppm"),
-    "last_tested": ("Leslies Last Tested", None),
+    "test_date": ("Leslies Last Tested", None),
 }
 
 
@@ -43,7 +43,11 @@ async def async_setup_entry(
         """Fetch data from API endpoint."""
         try:
             data = await hass.async_add_executor_job(api.fetch_water_test_data)
-            data["last_tested"] = datetime.now().isoformat()  # Add timestamp
+            # Ensure 'test_date' is included in the data
+            if "test_date" in data:
+                data["last_tested"] = data["test_date"]  # Use the 'test_date' value
+            else:
+                data["last_tested"] = None  # Fallback if 'test_date' is missing
             return data
         except requests.RequestException as err:
             raise UpdateFailed(f"Error fetching data: {err}") from err

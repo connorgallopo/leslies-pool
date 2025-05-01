@@ -85,6 +85,7 @@ class LesliesPoolApi:
                     columns = first_row.find_all("td")
                     if len(columns) > 10:
                         values = {
+                            "test_date": columns[0].text.strip(),
                             "free_chlorine": columns[1].text.strip(),
                             "total_chlorine": columns[2].text.strip(),
                             "ph": columns[3].text.strip(),
