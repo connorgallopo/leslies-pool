@@ -18,17 +18,17 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 SENSOR_TYPES = {
-    "free_chlorine": ("Leslie's Free Chlorine", "ppm"),
-    "total_chlorine": ("Leslie's Total Chlorine", "ppm"),
-    "ph": ("Leslie's pH", "pH"),
-    "alkalinity": ("Leslie's Total Alkalinity", "ppm"),
-    "calcium": ("Leslie's Calcium Hardness", "ppm"),
-    "cyanuric_acid": ("Leslie's Cyanuric Acid", "ppm"),
-    "iron": ("Leslie's Iron", "ppm"),
-    "copper": ("Leslie's Copper", "ppm"),
-    "phosphates": ("Leslie's Phosphates", "ppb"),
-    "salt": ("Leslie's Salt", "ppm"),
-    "last_tested": ("Leslie's Last Tested", None),  # New sensor for last tested
+    "free_chlorine": ("Leslies Free Chlorine", "ppm"),  # Removed apostrophe
+    "total_chlorine": ("Leslies Total Chlorine", "ppm"),
+    "ph": ("Leslies pH", "pH"),
+    "alkalinity": ("Leslies Total Alkalinity", "ppm"),
+    "calcium": ("Leslies Calcium Hardness", "ppm"),
+    "cyanuric_acid": ("Leslies Cyanuric Acid", "ppm"),
+    "iron": ("Leslies Iron", "ppm"),
+    "copper": ("Leslies Copper", "ppm"),
+    "phosphates": ("Leslies Phosphates", "ppb"),
+    "salt": ("Leslies Salt", "ppm"),
+    "last_tested": ("Leslies Last Tested", None),
 }
 
 
@@ -64,14 +64,20 @@ async def async_setup_entry(
     sensors = []
     for sensor_type, (name, unit) in SENSOR_TYPES.items():
         unique_id = f"{entry.entry_id}_leslies_{sensor_type}"
-        entity_id = entity_registry.async_get_entity_id(
-            "sensor", DOMAIN, unique_id
-        )
 
-        # If an entity with the same unique ID exists, update its entity_id
-        if entity_id:
-            new_entity_id = f"sensor.leslies_{sensor_type}"
-            entity_registry.async_update_entity(entity_id, new_entity_id=new_entity_id)
+        # Try to find the entity in the registry using the unique ID
+        entity_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
+
+        # If the entity is not found, check for the old format without "leslies_"
+        if not entity_id:
+            old_unique_id = f"{entry.entry_id}_{sensor_type}"  # Old unique ID format
+            entity_id = entity_registry.async_get_entity_id("sensor", DOMAIN, old_unique_id)
+
+            # If an old entity is found, update its unique ID and entity_id
+            if entity_id:
+                new_entity_id = f"sensor.leslies_{sensor_type}"
+                entity_registry.async_update_entity(entity_id, new_unique_id=unique_id)
+                entity_registry.async_update_entity(entity_id, new_entity_id=new_entity_id)
 
         # Create the sensor entity
         sensors.append(LesliesPoolSensor(coordinator, entry, sensor_type, name, unit))
