@@ -84,8 +84,22 @@ class LesliesPoolApi:
                 if isinstance(first_row, Tag):
                     columns = first_row.find_all("td")
                     if len(columns) > 10:
+                        # Extract test_date from the first column
+                        test_date_tag = first_row.find("th", class_="text-center align-middle p-1")
+                        test_date = None
+                        if test_date_tag:
+                            badge = test_date_tag.find("span", class_="badge badge-secondary p-2")
+                            if badge:
+                                test_date = badge.text.strip()
+
+                        # Determine in_store value from the last column
+                        in_store_tag = first_row.find_all("td")[-1]
+                        in_store = True  # Default to True
+                        if in_store_tag and in_store_tag.find("i", class_="fa fa-times-circle text-danger"):
+                            in_store = False
+
+                        # Populate the values dictionary
                         values = {
-                            "test_date": columns[0].text.strip(),
                             "free_chlorine": columns[1].text.strip(),
                             "total_chlorine": columns[2].text.strip(),
                             "ph": columns[3].text.strip(),
@@ -96,6 +110,8 @@ class LesliesPoolApi:
                             "copper": columns[8].text.strip(),
                             "phosphates": columns[9].text.strip(),
                             "salt": columns[10].text.strip(),
+                            "test_date": test_date,
+                            "in_store": in_store,  # Add in_store value
                         }
 
         return values

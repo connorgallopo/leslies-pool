@@ -18,7 +18,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 SENSOR_TYPES = {
-    "free_chlorine": ("Leslies Free Chlorine", "ppm"),  # Removed apostrophe
+    "free_chlorine": ("Leslies Free Chlorine", "ppm"),
     "total_chlorine": ("Leslies Total Chlorine", "ppm"),
     "ph": ("Leslies pH", "pH"),
     "alkalinity": ("Leslies Total Alkalinity", "ppm"),
@@ -29,6 +29,7 @@ SENSOR_TYPES = {
     "phosphates": ("Leslies Phosphates", "ppb"),
     "salt": ("Leslies Salt", "ppm"),
     "test_date": ("Leslies Last Tested", None),
+    "in_store": ("Leslies In Store", None),
 }
 
 
