@@ -1,4 +1,5 @@
 """Initialize Leslie's Pool Water Tests integration."""
+
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry

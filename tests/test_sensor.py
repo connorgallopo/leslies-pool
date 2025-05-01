@@ -1,4 +1,5 @@
 """Test the Leslie's Pool Water Tests sensors."""
+
 import logging
 from datetime import timedelta
 from unittest.mock import AsyncMock

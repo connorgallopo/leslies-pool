@@ -1,4 +1,5 @@
 """Test the Leslie's Pool Water Tests config flow."""
+
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 

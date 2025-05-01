@@ -1,4 +1,5 @@
 """Config flow for Leslie's Pool Water Tests integration."""
+
 from __future__ import annotations
 
 import logging

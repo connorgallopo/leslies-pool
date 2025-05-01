@@ -1,4 +1,5 @@
 """Sensor platform for Leslie's Pool Water Tests."""
+
 import logging
 from datetime import datetime, timedelta
 
@@ -76,13 +77,17 @@ async def async_setup_entry(
         # If the entity is not found, check for the old format without "leslies_"
         if not entity_id:
             old_unique_id = f"{entry.entry_id}_{sensor_type}"  # Old unique ID format
-            entity_id = entity_registry.async_get_entity_id("sensor", DOMAIN, old_unique_id)
+            entity_id = entity_registry.async_get_entity_id(
+                "sensor", DOMAIN, old_unique_id
+            )
 
             # If an old entity is found, update its unique ID and entity_id
             if entity_id:
                 new_entity_id = f"sensor.leslies_{sensor_type}"
                 entity_registry.async_update_entity(entity_id, new_unique_id=unique_id)
-                entity_registry.async_update_entity(entity_id, new_entity_id=new_entity_id)
+                entity_registry.async_update_entity(
+                    entity_id, new_entity_id=new_entity_id
+                )
 
         # Create the sensor entity
         sensors.append(LesliesPoolSensor(coordinator, entry, sensor_type, name, unit))
