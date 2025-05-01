@@ -11,6 +11,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
+from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN
 
@@ -36,7 +37,6 @@ async def async_setup_entry(
 ) -> None:
     """Set up Leslie's Pool Water Tests sensors from a config entry."""
     api = hass.data[DOMAIN][entry.entry_id]
-
     scan_interval = entry.data.get("scan_interval", 300)
 
     async def async_update_data():
@@ -58,10 +58,23 @@ async def async_setup_entry(
 
     await coordinator.async_refresh()
 
-    sensors = [
-        LesliesPoolSensor(coordinator, entry, sensor_type, name, unit)
-        for sensor_type, (name, unit) in SENSOR_TYPES.items()
-    ]
+    # Access the entity registry
+    entity_registry = er.async_get(hass)
+
+    sensors = []
+    for sensor_type, (name, unit) in SENSOR_TYPES.items():
+        unique_id = f"{entry.entry_id}_leslies_{sensor_type}"
+        entity_id = entity_registry.async_get_entity_id(
+            "sensor", DOMAIN, unique_id
+        )
+
+        # If an entity with the same unique ID exists, update its entity_id
+        if entity_id:
+            new_entity_id = f"sensor.leslies_{sensor_type}"
+            entity_registry.async_update_entity(entity_id, new_entity_id=new_entity_id)
+
+        # Create the sensor entity
+        sensors.append(LesliesPoolSensor(coordinator, entry, sensor_type, name, unit))
 
     async_add_entities(sensors, update_before_add=True)
 
