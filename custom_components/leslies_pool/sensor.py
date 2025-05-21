@@ -1,37 +1,37 @@
 """Sensor platform for Leslie's Pool Water Tests."""
 
+import requests
+from .const import DOMAIN
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.update_coordinator import UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceEntryType
+from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.components.sensor import SensorEntity
 import logging
 from datetime import datetime, timedelta
+
 
 def parse_test_date(date_str):
     """Parse the test date string from Leslie's website into a datetime object."""
     if not date_str:
         return None
-    
+
     try:
         # Parse MM/DD/YYYY format
         date_obj = datetime.strptime(date_str, "%m/%d/%Y")
-        
+
         # Since we don't have a time component, set it to noon UTC to avoid timezone issues
         date_obj = date_obj.replace(hour=12, minute=0, second=0, microsecond=0)
-        
+
         return date_obj
     except ValueError:
         _LOGGER.error(f"Failed to parse test date: {date_str}")
         return None
 
-import requests
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType
-from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.helpers.update_coordinator import UpdateFailed
-from homeassistant.helpers import entity_registry as er
-
-from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -70,6 +70,9 @@ async def async_setup_entry(
             else:
                 data["last_tested"] = None  # Fallback if 'test_date' is missing
                 data["test_timestamp"] = None
+
+            # Add timestamp to force update even when values haven't changed
+            data["_last_poll"] = datetime.now().isoformat()
             return data
         except requests.RequestException as err:
             raise UpdateFailed(f"Error fetching data: {err}") from err
@@ -125,6 +128,7 @@ class LesliesPoolSensor(SensorEntity):
         self._sensor_type = sensor_type
         self._name = name
         self._unit = unit
+        self._attr_should_poll = False  # We don't poll this entity directly
         self._attr_last_updated = None
 
     @property
@@ -140,6 +144,8 @@ class LesliesPoolSensor(SensorEntity):
     @property
     def state(self):
         """Return the state of the sensor."""
+        # Force entity to update by accessing the _last_poll field first
+        _ = self.coordinator.data.get("_last_poll")
         return self.coordinator.data.get(self._sensor_type)
 
     @property
@@ -170,14 +176,15 @@ class LesliesPoolSensor(SensorEntity):
     async def async_added_to_hass(self):
         """When entity is added to hass."""
         self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
+            self.coordinator.async_add_listener(self._handle_coordinator_update)
         )
-        
-    @property
-    def last_updated(self):
-        """Return the timestamp of when the sensor state was last updated."""
-        if self.coordinator.data and "test_timestamp" in self.coordinator.data:
-            return self.coordinator.data.get("test_timestamp")
-        
-        # Fall back to the default behavior if no test timestamp is available
-        return super().last_updated
+
+    def _handle_coordinator_update(self):
+        """Handle updated data from the coordinator."""
+        # Force entity to update timestamp
+        self._attr_last_updated = datetime.now()
+        self.async_write_ha_state()
+
+    # Remove the last_updated override so Home Assistant uses the default behavior
+    # This will show when data was actually fetched from the API
+    # The test date is still available in the state of the "Leslies Last Tested" sensor
