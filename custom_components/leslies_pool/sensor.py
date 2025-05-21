@@ -3,6 +3,23 @@
 import logging
 from datetime import datetime, timedelta
 
+def parse_test_date(date_str):
+    """Parse the test date string from Leslie's website into a datetime object."""
+    if not date_str:
+        return None
+    
+    try:
+        # Parse MM/DD/YYYY format
+        date_obj = datetime.strptime(date_str, "%m/%d/%Y")
+        
+        # Since we don't have a time component, set it to noon UTC to avoid timezone issues
+        date_obj = date_obj.replace(hour=12, minute=0, second=0, microsecond=0)
+        
+        return date_obj
+    except ValueError:
+        _LOGGER.error(f"Failed to parse test date: {date_str}")
+        return None
+
 import requests
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -48,8 +65,11 @@ async def async_setup_entry(
             # Ensure 'test_date' is included in the data
             if "test_date" in data:
                 data["last_tested"] = data["test_date"]  # Use the 'test_date' value
+                # Parse test_date into a datetime object
+                data["test_timestamp"] = parse_test_date(data["test_date"])
             else:
                 data["last_tested"] = None  # Fallback if 'test_date' is missing
+                data["test_timestamp"] = None
             return data
         except requests.RequestException as err:
             raise UpdateFailed(f"Error fetching data: {err}") from err
@@ -105,6 +125,7 @@ class LesliesPoolSensor(SensorEntity):
         self._sensor_type = sensor_type
         self._name = name
         self._unit = unit
+        self._attr_last_updated = None
 
     @property
     def unique_id(self):
@@ -151,3 +172,12 @@ class LesliesPoolSensor(SensorEntity):
         self.async_on_remove(
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
+        
+    @property
+    def last_updated(self):
+        """Return the timestamp of when the sensor state was last updated."""
+        if self.coordinator.data and "test_timestamp" in self.coordinator.data:
+            return self.coordinator.data.get("test_timestamp")
+        
+        # Fall back to the default behavior if no test timestamp is available
+        return super().last_updated

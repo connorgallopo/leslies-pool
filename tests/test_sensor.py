@@ -14,16 +14,18 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 SENSOR_TYPES = {
-    "free_chlorine": ("Free Chlorine", "ppm"),
-    "total_chlorine": ("Total Chlorine", "ppm"),
-    "ph": ("pH", "pH"),
-    "alkalinity": ("Total Alkalinity", "ppm"),
-    "calcium": ("Calcium Hardness", "ppm"),
-    "cyanuric_acid": ("Cyanuric Acid", "ppm"),
-    "iron": ("Iron", "ppm"),
-    "copper": ("Copper", "ppm"),
-    "phosphates": ("Phosphates", "ppb"),
-    "salt": ("Salt", "ppm"),
+    "free_chlorine": ("Leslies Free Chlorine", "ppm"),
+    "total_chlorine": ("Leslies Total Chlorine", "ppm"),
+    "ph": ("Leslies pH", "pH"),
+    "alkalinity": ("Leslies Total Alkalinity", "ppm"),
+    "calcium": ("Leslies Calcium Hardness", "ppm"),
+    "cyanuric_acid": ("Leslies Cyanuric Acid", "ppm"),
+    "iron": ("Leslies Iron", "ppm"),
+    "copper": ("Leslies Copper", "ppm"),
+    "phosphates": ("Leslies Phosphates", "ppb"),
+    "salt": ("Leslies Salt", "ppm"),
+    "test_date": ("Leslies Last Tested", None),
+    "in_store": ("Leslies In Store", None),
 }
 
 
@@ -76,7 +78,7 @@ async def test_sensor_properties(hass, mock_coordinator):
         mock_coordinator, mock_entry, "free_chlorine", "Free Chlorine", "ppm"
     )
 
-    assert sensor.unique_id == "test_entry_free_chlorine"
+    assert sensor.unique_id == "test_entry_leslies_free_chlorine"
     assert sensor.name == "Free Chlorine"
     assert sensor.state == 1
     assert sensor.available
