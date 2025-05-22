@@ -144,8 +144,15 @@ class LesliesPoolSensor(SensorEntity):
     @property
     def state(self):
         """Return the state of the sensor."""
-        # Force entity to update by accessing the _last_poll field first
-        _ = self.coordinator.data.get("_last_poll")
+        if not self.coordinator.data:
+            return None
+            
+        # Access the timestamp field to ensure we're using the latest data
+        timestamp = self.coordinator.data.get("_last_poll")
+        if not timestamp:
+            return None
+            
+        # Get the actual value
         return self.coordinator.data.get(self._sensor_type)
 
     @property
@@ -175,16 +182,25 @@ class LesliesPoolSensor(SensorEntity):
 
     async def async_added_to_hass(self):
         """When entity is added to hass."""
+        # Register to receive updates from the coordinator
         self.async_on_remove(
             self.coordinator.async_add_listener(self._handle_coordinator_update)
         )
-
+        
     def _handle_coordinator_update(self):
         """Handle updated data from the coordinator."""
-        # Force entity to update timestamp
+        # Explicitly update state and force a timestamp change to ensure Home Assistant detects the update
         self._attr_last_updated = datetime.now()
         self.async_write_ha_state()
-
-    # Remove the last_updated override so Home Assistant uses the default behavior
-    # This will show when data was actually fetched from the API
-    # The test date is still available in the state of the "Leslies Last Tested" sensor
+        
+    @property
+    def extra_state_attributes(self):
+        """Return additional state attributes."""
+        if not self.coordinator.data:
+            return {}
+            
+        # Add last update timestamp to the entity attributes to force Home Assistant to update
+        return {
+            "last_update": datetime.now().isoformat(),
+            "data_timestamp": self.coordinator.data.get("_last_poll", ""),
+        }
