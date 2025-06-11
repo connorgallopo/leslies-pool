@@ -7,6 +7,6 @@
   "documentation": "https://github.com/connorgallopo/leslies-pool",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/connorgallopo/leslies-pool/issues",
-  "requirements": ["beautifulsoup4==4.12.3", "requests==2.32.3"],
-  "version": "2.0.1"
+  "requirements": ["beautifulsoup4==4.12.3", "requests"],
+  "version": "2.0.3"
 }
