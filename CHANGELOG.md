@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.1 (2026-05-11)
+
+### Bug Fixes
+- Migration from 2.x was broken. The handler lived inside `async_setup_entry` instead of at module level, so HA hit "Migration handler not found" and refused to load existing entries. Moved it to a proper `async_migrate_entry` and verified with tests.
+
+### Features
+- Added reauth flow. If Leslie's ever rejects the saved password (e.g. after a manual password change), HA prompts for the new one in place instead of leaving the integration in a failed state.
+
 ## 3.0.0 (2026-05-11)
 
 ### Features
