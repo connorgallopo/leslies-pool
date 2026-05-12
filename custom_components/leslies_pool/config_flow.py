@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 import voluptuous as vol
@@ -42,6 +43,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._relate_customer_id: str | None = None
         self._customer_id: str | None = None
         self._pools: list[PoolProfile] = []
+        self._reauth_email: str | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -105,6 +107,49 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         pool_choices = {p.id: p.pool_name for p in self._pools}
         schema = vol.Schema({vol.Required("pool_profile_id"): vol.In(pool_choices)})
         return self.async_show_form(step_id="pick_pool", data_schema=schema)
+
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> config_entries.ConfigFlowResult:
+        """Triggered when async_setup_entry raises ConfigEntryAuthFailed."""
+        self._reauth_email = entry_data.get("email") or entry_data.get("username")
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Ask the user for a fresh password and revalidate."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            password = user_input[CONF_PASSWORD]
+            email = self._reauth_email or ""
+            try:
+                customer_id, relate_id = await self.hass.async_add_executor_job(
+                    LesliesPoolApi.resolve_relate_customer_id, email, password
+                )
+            except InvalidAuthError:
+                errors["base"] = "invalid_auth"
+            except LesliesPoolError:
+                _LOGGER.exception("Leslie's API error during reauth")
+                errors["base"] = "cannot_connect"
+            else:
+                entry = self._get_reauth_entry()
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data_updates={
+                        "email": email,
+                        "password": password,
+                        "customer_id": customer_id,
+                        "relate_customer_id": relate_id,
+                    },
+                )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}),
+            description_placeholders={"email": self._reauth_email or ""},
+            errors=errors,
+        )
 
     def _create_entry(self, pool: PoolProfile) -> config_entries.ConfigFlowResult:
         assert self._email and self._relate_customer_id

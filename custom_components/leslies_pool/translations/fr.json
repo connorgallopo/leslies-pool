@@ -2,7 +2,8 @@
   "config": {
     "abort": {
       "already_configured": "Ce compte Leslie's est déjà configuré.",
-      "pool_gone": "Cette piscine n'est plus disponible sur votre compte."
+      "pool_gone": "Cette piscine n'est plus disponible sur votre compte.",
+      "reauth_successful": "Identifiants mis à jour."
     },
     "error": {
       "invalid_auth": "Leslie's a rejeté l'e-mail ou le mot de passe.",
@@ -26,6 +27,13 @@
         },
         "description": "Votre compte contient plusieurs piscines. Choisissez celle que cette intégration doit suivre.",
         "title": "Choisir une piscine"
+      },
+      "reauth_confirm": {
+        "data": {
+          "password": "Mot de passe"
+        },
+        "description": "Leslie's a rejeté le mot de passe enregistré pour {email}. Entrez le mot de passe actuel pour continuer.",
+        "title": "Ré-authentification de Leslie's Pool"
       }
     }
   }

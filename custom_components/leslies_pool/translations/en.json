@@ -2,7 +2,8 @@
   "config": {
     "abort": {
       "already_configured": "This Leslie's account is already configured.",
-      "pool_gone": "That pool is no longer available on your account."
+      "pool_gone": "That pool is no longer available on your account.",
+      "reauth_successful": "Credentials updated."
     },
     "error": {
       "invalid_auth": "Leslie's rejected the email or password.",
@@ -26,6 +27,13 @@
         },
         "description": "Your account has more than one pool. Pick which one this integration should track.",
         "title": "Pick a pool"
+      },
+      "reauth_confirm": {
+        "data": {
+          "password": "Password"
+        },
+        "description": "Leslie's rejected the saved password for {email}. Enter the current password to continue.",
+        "title": "Re-authenticate Leslie's Pool"
       }
     }
   }

@@ -2,7 +2,8 @@
   "config": {
     "abort": {
       "already_configured": "Denne Leslie's-kontoen er allerede konfigurert.",
-      "pool_gone": "Dette bassenget er ikke lenger tilgjengelig på kontoen din."
+      "pool_gone": "Dette bassenget er ikke lenger tilgjengelig på kontoen din.",
+      "reauth_successful": "Innloggingsinformasjon oppdatert."
     },
     "error": {
       "invalid_auth": "Leslie's avviste e-postadressen eller passordet.",
@@ -26,6 +27,13 @@
         },
         "description": "Kontoen din har flere basseng. Velg hvilket denne integrasjonen skal følge.",
         "title": "Velg et basseng"
+      },
+      "reauth_confirm": {
+        "data": {
+          "password": "Passord"
+        },
+        "description": "Leslie's avviste det lagrede passordet for {email}. Skriv inn nåværende passord for å fortsette.",
+        "title": "Re-autentiser Leslie's Pool"
       }
     }
   }
