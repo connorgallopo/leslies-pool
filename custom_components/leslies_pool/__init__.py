@@ -7,8 +7,9 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
-from .api import LesliesPoolApi, LesliesPoolError
+from .api import InvalidAuthError, LesliesPoolApi, LesliesPoolError
 from .const import DOMAIN
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
@@ -18,12 +19,32 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Leslie's Pool Water Tests from a config entry."""
-
-    if entry.version < 2:
-        if not await _migrate_v1_entry(hass, entry):
-            return False
-
     data = entry.data
+
+    # Entries migrated from v1 don't have the relateCustomerID yet. Look it up
+    # now using the saved email/password, then persist it on the entry so we
+    # don't have to do this every time.
+    if not data.get("relate_customer_id"):
+        try:
+            customer_id, relate_id = await hass.async_add_executor_job(
+                LesliesPoolApi.resolve_relate_customer_id,
+                data["email"],
+                data["password"],
+            )
+        except InvalidAuthError as err:
+            raise ConfigEntryAuthFailed(
+                "Leslie's rejected the saved email/password. Reconfigure the integration."
+            ) from err
+        except LesliesPoolError as err:
+            raise ConfigEntryNotReady(f"Couldn't reach Leslie's API: {err}") from err
+
+        hass.config_entries.async_update_entry(
+            entry,
+            data={**data, "customer_id": customer_id, "relate_customer_id": relate_id},
+            unique_id=f"leslies_{relate_id}",
+        )
+        data = entry.data
+
     api = LesliesPoolApi(
         relate_customer_id=data["relate_customer_id"],
         email=data["email"],
@@ -44,36 +65,22 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unloaded
 
 
-async def _migrate_v1_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Translate a v1 entry (URL-paste flow) to v2 (Boomi flow)."""
-    old = entry.data
-    email = old.get("username") or old.get("email")
-    password = old.get("password")
-    if not email or not password:
-        _LOGGER.error("Cannot migrate Leslie's entry: missing email/password")
-        return False
-    try:
-        customer_id, relate_id = await hass.async_add_executor_job(
-            LesliesPoolApi.resolve_relate_customer_id, email, password
-        )
-    except LesliesPoolError as err:
-        _LOGGER.error("Migration failed: %s. User must reconfigure the integration.", err)
-        return False
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate v1 entries (URL-paste flow) to v2 (Boomi flow).
 
-    new_data = {
-        "email": email,
-        "password": password,
-        "relate_customer_id": relate_id,
-        "customer_id": customer_id,
-        "pool_profile_id": old["pool_profile_id"],
-        "pool_name": old.get("pool_name", "Pool"),
-        "scan_interval": old.get("scan_interval", 300),
-    }
-    hass.config_entries.async_update_entry(
-        entry,
-        data=new_data,
-        version=2,
-        unique_id=f"leslies_{relate_id}",
-    )
-    _LOGGER.info("Migrated Leslie's Pool entry to v2 (relate_customer_id=%s)", relate_id)
+    Only renames `username` to `email`. The relateCustomerID lookup is
+    deferred to async_setup_entry so transient network failures don't
+    permanently brick the entry.
+    """
+    if entry.version == 1:
+        old = entry.data
+        new_data = dict(old)
+        if "username" in new_data and "email" not in new_data:
+            new_data["email"] = new_data.pop("username")
+        new_data.setdefault("pool_name", "Pool")
+        new_data.setdefault("scan_interval", 300)
+
+        hass.config_entries.async_update_entry(entry, data=new_data, version=2)
+        _LOGGER.info("Migrated Leslie's Pool entry to v2")
+
     return True
