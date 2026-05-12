@@ -14,7 +14,7 @@
 [![Discord][discord-shield]][discord]
 [![Community Forum][forum-shield]][forum]
 
-**This integration leverages Leslie's Pools chemical results internal API to get those results and expose them to HomeAssistant. This will fetch data for both Leslies in-store tests as well as the test results from the AccuBlue home tester.**
+**This integration pulls your pool chemistry results from Leslie's Pool and exposes them to Home Assistant. It works for both Leslie's in-store tests and AccuBlue Home tester results.**
 
 **This component will set up the following platforms.**
 
@@ -24,18 +24,34 @@
 
 **The component will set up the following sensors:**
 
-- Leslies Free Chlorine - PPM
-- Leslies Total Chlorine - PPM
-- Leslies PH - pH
-- Leslies Alkalinity - PPM
-- Leslies Calcium - PPM
-- Leslies Cyanuric Acid - PPM
-- Leslies Iron - PPM
-- Leslies Copper - PPM
-- Leslies Phosphates - PPB
-- Leslies Salt - PPM
-- Leslies Last Tested - Date
-- Leslies In Store - True/False
+Chemistry (PPM unless noted):
+
+- Free Chlorine
+- Total Chlorine
+- pH
+- Total Alkalinity
+- Calcium Hardness
+- Cyanuric Acid
+- Iron
+- Copper
+- Phosphates (PPB)
+- Salt
+- TDS
+- Bromine
+- Biguanides
+
+Test metadata:
+
+- Last Tested - Date
+- In Store - True/False
+- Test Source - "In-Store" or "AccuBlue Home"
+- Days Since Last Test
+- Last Test ID
+- Pool Sanitizer (e.g. "Salt 3000-4500")
+- Pool Size (gallons)
+- Pool Name
+
+Each sensor also carries `results_id`, `test_source`, and `test_timestamp` as state attributes so automations can fire when a new test arrives.
 
 ## Installation - Automatic (REQUIRES HACS)
 
@@ -44,7 +60,7 @@
 3. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "leslies_pool"
 4. Follow config flow
 
-## Installation - Manaul
+## Installation - Manual
 
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
 2. If you do not have a `custom_components` directory (folder) there, you need to create it.
@@ -56,9 +72,19 @@
 
 ## Setup
 
-1. Provide the Username and Password for your leslie's account. These are used to auth and refresh cookies
-2. Input the Water Test URL. This can be found by navigating [here](https://lesliespool.com/on/demandware.store/Sites-lpm_site-Site/en_US/PoolProfile-Landing) once logged in, and then by clicking on "Water Tests" for the pool you want to integrate. The water test URL can be copied from the URL bar once you have navigated there. This URL contains the Pool ID and Pool Name which are needed to make the API calls to fetch the data.
-3. Set a polling rate (Seconds).
+1. Enter the email and password for your Leslie's account.
+2. If your account has more than one pool, pick which one to track.
+3. Set a polling rate (seconds).
+
+Your credentials are used once to look up your customer ID and pool list. After that, only the customer ID is sent on data fetches.
+
+## Upgrading from 2.x
+
+3.0 swaps the old HTML-scraping flow for the mobile app's JSON API. The web scraping stopped working in mid-2025 when Leslie's added session scoring to the storefront water-test endpoints.
+
+If you already have an entry configured, the integration migrates it automatically on first load - no manual reconfigure needed. Existing sensor history is preserved (unique IDs are unchanged).
+
+The displayed sensor names drop the `Leslies` prefix since the device name already provides that context. If your dashboards reference entity IDs (e.g. `sensor.leslies_free_chlorine`), those still work.
 
 ## Contributions are welcome!
 
