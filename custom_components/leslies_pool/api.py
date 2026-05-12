@@ -1,234 +1,329 @@
 """API client for Leslie's Pool Water Tests."""
 
+from __future__ import annotations
+
+import base64
+import logging
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
 import requests
-from bs4 import BeautifulSoup
-from bs4 import Tag
+
+from .const import (
+    BOOMI_BASE_URL,
+    BOOMI_BASIC_USER,
+    BOOMI_BASIC_PASS,
+    OCAPI_BASE_URL,
+    OCAPI_CLIENT_ID,
+    USER_AGENT,
+    CHEMISTRY_TESTS,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+
+class LesliesPoolError(Exception):
+    """Base error from the Leslie's API client."""
+
+
+class InvalidAuthError(LesliesPoolError):
+    """Email or password rejected by Leslie's."""
+
+
+class PoolNotFoundError(LesliesPoolError):
+    """Account has no pools, or the configured pool is gone."""
+
+
+@dataclass(frozen=True)
+class PoolProfile:
+    """A pool returned by the Boomi poolProfiles endpoint."""
+
+    id: str
+    pool_name: str
+    sanitization_code: str | None = None
+    size_in_gallons: str | None = None
 
 
 class LesliesPoolApi:
-    """API class to interact with Leslie's Pool service."""
-
-    LOGIN_PAGE_URL = "https://lesliespool.com/on/demandware.store/Sites-lpm_site-Site/en_US/Account-Show"
-    LOGIN_URL = "https://lesliespool.com/on/demandware.store/Sites-lpm_site-Site/en_US/Account-Login"
-    WATER_TEST_URL = "https://lesliespool.com/on/demandware.store/Sites-lpm_site-Site/en_US/WaterTest-GetWaterTest"
+    """Client for the Leslie's Pool Boomi mobile API."""
 
     def __init__(
-        self, username: str, password: str, pool_profile_id: str, pool_name: str
+        self,
+        relate_customer_id: str,
+        email: str,
+        pool_profile_id: str,
+        pool_name: str,
     ) -> None:
-        """Initialize the API with user credentials and pool details."""
-        self.username = username
-        self.password = password
-        self.pool_profile_id = pool_profile_id
-        self.pool_name = pool_name
-        self.session = requests.Session()
-        self._last_successful_values = {}  # Cache to store last valid data
-        self._last_successful_fetch = None  # Timestamp of last successful fetch
+        """Build a client for an already-configured account."""
+        self._relate_customer_id = relate_customer_id
+        self._email = email
+        self._pool_profile_id = pool_profile_id
+        self._pool_name = pool_name
 
-    def authenticate(self) -> bool:
-        """Authenticate the user and start a session."""
-        response = self.session.get(self.LOGIN_PAGE_URL)
-        soup = BeautifulSoup(response.text, "html.parser")
-        csrf_token_tag = soup.find("input", {"name": "csrf_token"})
+        self._session = requests.Session()
+        self._sanitizer_lookup: dict[str, str] | None = None
+        self._last_successful_values: dict[str, Any] = {}
 
-        csrf_token = None
-        if isinstance(csrf_token_tag, Tag) and csrf_token_tag.has_attr("value"):
-            csrf_token = csrf_token_tag["value"]
-
-        if not csrf_token:
-            return False
-
-        headers = {
-            "accept": "application/json, text/javascript, */*; q=0.01",
-            "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "user-agent": "Mozilla/5.0",
+    def _boomi_headers(self) -> dict[str, str]:
+        """Headers required on every Boomi request."""
+        auth = base64.b64encode(f"{BOOMI_BASIC_USER}:{BOOMI_BASIC_PASS}".encode()).decode()
+        return {
+            "Authorization": f"Basic {auth}",
+            "User-Agent": USER_AGENT,
+            "Accept": "application/json",
+            "source": "APP",
+            "DDP_email": self._email,
+            "DDP_ID": self._relate_customer_id,
         }
 
-        payload = {
-            "loginEmail": self.username,
-            "loginPassword": self.password,
-            "csrf_token": csrf_token,
-        }
+    @staticmethod
+    def resolve_relate_customer_id(email: str, password: str) -> tuple[str, str]:
+        """Return (customer_id, relateCustomerID) for the given credentials.
 
-        login_response = self.session.post(
-            self.LOGIN_URL, headers=headers, data=payload
+        Uses the OCAPI Session Bridge. Raises InvalidAuthError on bad creds.
+        """
+        creds = base64.b64encode(f"{email}:{password}".encode()).decode()
+        url = f"{OCAPI_BASE_URL}/customers/auth?client_id={OCAPI_CLIENT_ID}"
+        r = requests.post(
+            url,
+            headers={
+                "Authorization": f"Basic {creds}",
+                "Content-Type": "application/json",
+                "User-Agent": USER_AGENT,
+            },
+            json={"type": "credentials"},
+            timeout=20,
         )
-        return login_response.status_code == 200
+        if r.status_code == 401:
+            raise InvalidAuthError("Leslie's rejected the email/password")
+        r.raise_for_status()
 
-    def fetch_water_test_data(self) -> dict:
-        """Fetch water test data for the pool."""
-        import json
-        import logging
+        jwt = r.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+        payload = r.json()
+        customer_id = payload.get("customer_id")
+        if not jwt or not customer_id:
+            raise LesliesPoolError("OCAPI auth response missing JWT or customer_id")
 
-        _LOGGER = logging.getLogger(__name__)
-        _LOGGER.debug("Fetching water test data")
-        
-        # Try to fetch the data with authentication retry logic
-        for attempt in range(1, 3):  # Try up to 2 times
-            try:
-                # Check if we need to authenticate first
-                if attempt > 1:
-                    _LOGGER.info(f"Authentication attempt {attempt}")
-                    if not self.authenticate():
-                        _LOGGER.error("Authentication failed")
-                        return {}
-                
-                # First navigate to the water test page to set up session and cookies
-                landing_response = self.session.get(
-                    f"https://lesliespool.com/on/demandware.store/Sites-lpm_site-Site/en_US/WaterTest-Landing?poolProfileId={self.pool_profile_id}&poolName={self.pool_name}"
-                )
-                
-                # Check if we were redirected to the login page
-                if "Account-Show" in landing_response.url or "login?rurl=1" in landing_response.url:
-                    _LOGGER.warning("Session expired, need to re-authenticate")
-                    if attempt < 2:  # Only try to authenticate once
-                        continue  # Skip to next attempt which will authenticate
-                    else:
-                        _LOGGER.error("Failed to maintain authenticated session")
-                        return {}
-                
-                cookies = self.session.cookies.get_dict()
-                cookie_header = "; ".join([f"{key}={value}" for key, value in cookies.items()])
-                
-                headers = {
-                    "accept": "application/json, text/javascript, */*; q=0.01",
-                    "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-                    "cookie": cookie_header,
-                    "user-agent": "Mozilla/5.0",
-                }
-                
-                payload = "poolProfileName=Pool&poolSanitizer=Salt+3000-4000"
-                _LOGGER.debug(f"Sending POST request to {self.WATER_TEST_URL}")
-                response = self.session.post(self.WATER_TEST_URL, headers=headers, data=payload)
-                
-                # Check HTTP status code
-                if response.status_code != 200:
-                    _LOGGER.error(f"HTTP error: {response.status_code}")
-                    if attempt < 2:
-                        continue  # Try again with authentication
-                    return {}
-                
-                # Try to parse JSON response
-                try:
-                    # Get a sample of the response for debugging
-                    response_preview = response.text[:200] + "..." if len(response.text) > 200 else response.text
-                    _LOGGER.debug(f"Response preview: {response_preview}")
-                    
-                    data = response.json()
-                    
-                    # Check for authentication issues in the JSON response
-                    if "errorMsg" in data:
-                        _LOGGER.error(f"API returned error: {data.get('errorMsg')}")
-                        if "login" in str(data.get('errorMsg')).lower() and attempt < 2:
-                            _LOGGER.warning("Authentication error detected in response, re-authenticating")
-                            if self.authenticate():
-                                continue
-                    
-                    break  # Successfully parsed JSON, exit the loop
-                except json.JSONDecodeError as e:
-                    _LOGGER.error(f"JSON parsing error: {e}")
-                    _LOGGER.debug(f"Response content (first 500 chars): {response.text[:500]}")
-                    
-                    # Check if this looks like an auth issue (e.g., HTML login page)
-                    if "<html" in response.text[:100].lower():
-                        _LOGGER.warning("Response appears to be HTML instead of JSON - likely an auth issue")
-                        # Look for login-related indicators in the response
-                        if any(sign in response.text.lower() for sign in ["login", "sign in", "password", "username"]):
-                            _LOGGER.info("Login page detected in response - session likely expired")
-                        if attempt < 2:  # Try re-authenticating
-                            if self.authenticate():
-                                continue
-                    
-                    return {}  # If all attempts failed or not an auth issue
-            
-            except requests.RequestException as e:
-                _LOGGER.error(f"Request failed: {e}")
-                if attempt < 2:
-                    _LOGGER.info("Retrying after connection error")
-                    continue
-                return {}
-        
-            # If we've exhausted all retries without success
-            if 'data' not in locals():
-                _LOGGER.error("Failed to fetch data after all retries")
-                if self._last_successful_values:
-                    _LOGGER.info("Returning last cached values due to fetch failure")
-                    return self._last_successful_values
-                return {}
+        r = requests.get(
+            f"{OCAPI_BASE_URL}/customers/{customer_id}?client_id={OCAPI_CLIENT_ID}",
+            headers={
+                "Authorization": f"Bearer {jwt}",
+                "User-Agent": USER_AGENT,
+                "Accept": "application/json",
+            },
+            timeout=20,
+        )
+        r.raise_for_status()
+        relate_id = r.json().get("c_relateCustomerID")
+        if not relate_id:
+            raise LesliesPoolError("Customer record missing c_relateCustomerID")
+        return customer_id, str(relate_id)
 
-        # Process the data if we successfully retrieved it
-        values = {}
-        try:
-            # Check if the response contains the expected HTML content
-            if "response" not in data:
-                _LOGGER.error("Missing 'response' key in JSON data")
-                return {}
-                
-            html_content = data["response"]
-            _LOGGER.debug(f"HTML content length: {len(html_content)}")
-            
-            soup = BeautifulSoup(html_content, "html.parser")
-            # Original find syntax that was working before
-            table = soup.find(
-                "table", {"class": "table table-striped table-bordered table-hover table-sm"}
+    @staticmethod
+    def discover_pool_profiles(email: str, relate_customer_id: str) -> list[PoolProfile]:
+        """Return the user's registered pools."""
+        auth = base64.b64encode(f"{BOOMI_BASIC_USER}:{BOOMI_BASIC_PASS}".encode()).decode()
+        r = requests.get(
+            f"{BOOMI_BASE_URL}/ws/rest/Mobile/RelateORCE/poolProfiles/v1",
+            headers={
+                "Authorization": f"Basic {auth}",
+                "User-Agent": USER_AGENT,
+                "Accept": "application/json",
+                "source": "APP",
+                "DDP_email": email,
+                "DDP_ID": relate_customer_id,
+            },
+            timeout=20,
+        )
+        r.raise_for_status()
+        raw = r.json().get("pool_profiles", [])
+        if not raw:
+            raise PoolNotFoundError("Account has no pool profiles")
+        return [
+            PoolProfile(
+                id=str(p["id"]),
+                pool_name=p.get("pool_name") or f"Pool {p['id']}",
+                sanitization_code=str(p.get("sanitization", "")) or None,
+                size_in_gallons=str(p.get("size_in_gallons", "")) or None,
             )
-            
-            if not isinstance(table, Tag):
-                _LOGGER.warning("Water test table not found in response")
-                if self._last_successful_values:
-                    _LOGGER.info("Returning last cached values since no water test table was found")
-                    return self._last_successful_values
-                return {}
-            first_row_tag = table.find("tbody")
-            if isinstance(first_row_tag, Tag):
-                first_row = first_row_tag.find("tr")
-                if isinstance(first_row, Tag):
-                    columns = first_row.find_all("td")
-                    if len(columns) > 10:
-                        # Extract test_date from the first column
-                        test_date_tag = first_row.find(
-                            "th", {"class": "text-center align-middle p-1"}
-                        )
-                        test_date = None
-                        if test_date_tag:
-                            badge = test_date_tag.find(
-                                "span", {"class": "badge badge-secondary p-2"}
-                            )
-                            if badge:
-                                test_date = badge.text.strip()
+            for p in raw
+        ]
 
-                        # Determine in_store value from the last column
-                        in_store_tag = first_row.find_all("td")[-1]
-                        in_store = True  # Default to True
-                        if in_store_tag and in_store_tag.find(
-                            "i", {"class": "fa fa-times-circle text-danger"}
-                        ):
-                            in_store = False
+    def _get_sanitizer_lookup(self) -> dict[str, str]:
+        """Fetch and cache the brand_id -> sanitizer name map."""
+        if self._sanitizer_lookup is None:
+            r = self._session.get(
+                f"{BOOMI_BASE_URL}/ws/rest/Mobile/poolSanitizers/v1",
+                headers=self._boomi_headers(),
+                timeout=20,
+            )
+            r.raise_for_status()
+            self._sanitizer_lookup = {
+                str(s["brand_id"]): s.get("brand_name", "")
+                for s in r.json().get("pool_sanitizers", [])
+            }
+        return self._sanitizer_lookup
 
-                        # Populate the values dictionary
-                        values = {
-                            "free_chlorine": columns[1].text.strip(),
-                            "total_chlorine": columns[2].text.strip(),
-                            "ph": columns[3].text.strip(),
-                            "alkalinity": columns[4].text.strip(),
-                            "calcium": columns[5].text.strip(),
-                            "cyanuric_acid": columns[6].text.strip(),
-                            "iron": columns[7].text.strip(),
-                            "copper": columns[8].text.strip(),
-                            "phosphates": columns[9].text.strip(),
-                            "salt": columns[10].text.strip(),
-                            "test_date": test_date,
-                            "in_store": in_store,
-                        }
+    def fetch_water_test_data(self) -> dict[str, Any]:
+        """Return the latest reading for every sensor."""
+        try:
+            home = self._fetch_home_dashboard()
+            history = self._fetch_water_test_history()
+            days_since = self._fetch_days_since_last_test()
 
-        except Exception as e:
-            _LOGGER.error(f"Error processing HTML content: {e}")
-            return {}
-            
-        # If we successfully got values, cache them for future use if needed
-        if values:
-            import time
-            self._last_successful_values = values.copy()
-            self._last_successful_fetch = time.time()
-            _LOGGER.debug("Successfully updated cache with new values")
-        
-        return values
+            values: dict[str, Any] = {}
+
+            latest_ts: str | None = None
+            latest_results_id: str | None = None
+            latest_is_store: bool | None = None
+            for api_type, sensor_key, _name, _unit in CHEMISTRY_TESTS:
+                latest = history.latest_for(api_type)
+                values[sensor_key] = latest.value if latest else None
+                if latest and (latest_ts is None or latest.timestamp > latest_ts):
+                    latest_ts = latest.timestamp
+                    latest_results_id = latest.results_id
+                    latest_is_store = latest.is_store_test
+
+            if latest_ts:
+                values["test_date"] = _to_display_date(latest_ts)
+                values["test_timestamp"] = _to_datetime(latest_ts)
+                values["in_store"] = bool(latest_is_store)
+                values["test_source"] = "In-Store" if latest_is_store else "AccuBlue Home"
+                values["results_id"] = latest_results_id
+            else:
+                values["test_date"] = None
+                values["test_timestamp"] = None
+                values["in_store"] = None
+                values["test_source"] = None
+                values["results_id"] = None
+
+            values["days_since_test"] = days_since
+            values["sanitizer"] = home.sanitizer_name(self._get_sanitizer_lookup())
+            values["pool_size"] = home.pool_size_gallons
+            values["pool_name_sensor"] = home.pool_name
+
+            self._last_successful_values = values
+            return values
+        except (requests.RequestException, LesliesPoolError, ValueError) as err:
+            _LOGGER.error("Leslie's API fetch failed: %s", err)
+            if self._last_successful_values:
+                _LOGGER.info("Returning cached values from last successful fetch")
+                return self._last_successful_values
+            raise
+
+    def _fetch_home_dashboard(self) -> _HomeData:
+        r = self._session.get(
+            f"{BOOMI_BASE_URL}/ws/rest/Mobile/RelateORCE/home/v4",
+            headers=self._boomi_headers(),
+            timeout=20,
+        )
+        r.raise_for_status()
+        profiles = r.json().get("pool_profile") or []
+        match = next((p for p in profiles if str(p.get("id")) == self._pool_profile_id), None)
+        if match is None and profiles:
+            match = profiles[0]
+        if match is None:
+            raise PoolNotFoundError("home/v4 returned no pool profiles")
+        return _HomeData(match)
+
+    def _fetch_water_test_history(self) -> _History:
+        # Boomi expects "yyyyMMdd HHmmss.fff" (literal space, not ISO 8601).
+        end = (datetime.now(timezone.utc) + timedelta(days=365)).strftime("%Y%m%d 235959.999")
+        start = "20200101 000000.000"
+        r = self._session.get(
+            f"{BOOMI_BASE_URL}/ws/rest/Mobile/waterTesting/history/v2",
+            headers=self._boomi_headers(),
+            params={
+                "pool_profile_id": self._pool_profile_id,
+                "start_date": start,
+                "end_date": end,
+            },
+            timeout=30,
+        )
+        r.raise_for_status()
+        return _History(r.json().get("water_test_history", {}).get("water_tests") or [])
+
+    def _fetch_days_since_last_test(self) -> int | None:
+        try:
+            r = self._session.get(
+                f"{BOOMI_BASE_URL}/ws/rest/Mobile/waterTesting/DaysSinceWaterTest",
+                headers=self._boomi_headers(),
+                params={"pool_profile_id": self._pool_profile_id},
+                timeout=15,
+            )
+            r.raise_for_status()
+            return int(r.json().get("no_of_days_since_last_watertest"))
+        except (requests.RequestException, ValueError, TypeError):
+            return None
+
+
+@dataclass(frozen=True)
+class _Reading:
+    value: Any
+    timestamp: str
+    is_store_test: bool
+    results_id: str | None
+
+
+class _History:
+    """Latest-by-type lookup over the water_tests list."""
+
+    def __init__(self, raw_tests: list[dict[str, Any]]) -> None:
+        self._by_type: dict[str, list[_Reading]] = {}
+        for t in raw_tests:
+            readings = [
+                _Reading(
+                    value=v.get("value"),
+                    timestamp=v.get("timestamp") or "",
+                    is_store_test=bool(v.get("is_store_test")),
+                    results_id=v.get("results_id"),
+                )
+                for v in (t.get("water_test_values") or [])
+                if v.get("value") is not None and v.get("timestamp")
+            ]
+            self._by_type[t.get("water_test_type", "")] = readings
+
+    def latest_for(self, api_type: str) -> _Reading | None:
+        readings = self._by_type.get(api_type) or []
+        if not readings:
+            return None
+        return max(readings, key=lambda r: r.timestamp)
+
+
+class _HomeData:
+    """Pool profile from the home/v4 response."""
+
+    def __init__(self, raw: dict[str, Any]) -> None:
+        self._raw = raw
+
+    @property
+    def pool_name(self) -> str | None:
+        return self._raw.get("pool_name")
+
+    @property
+    def pool_size_gallons(self) -> int | None:
+        size = self._raw.get("size_in_gallons")
+        try:
+            return int(size) if size is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    def sanitizer_name(self, lookup: dict[str, str]) -> str | None:
+        code = self._raw.get("sanitization")
+        if code is None:
+            return None
+        return lookup.get(str(code))
+
+
+def _to_datetime(boomi_ts: str) -> datetime | None:
+    try:
+        return datetime.strptime(boomi_ts, "%Y%m%d %H%M%S.%f").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _to_display_date(boomi_ts: str) -> str | None:
+    """Format the Boomi timestamp as MM/DD/YYYY (matches the v2 sensor format)."""
+    dt = _to_datetime(boomi_ts)
+    return dt.strftime("%m/%d/%Y") if dt else None
