@@ -1,19 +1,31 @@
 {
   "config": {
+    "abort": {
+      "already_configured": "Denne Leslie's-kontoen er allerede konfigurert.",
+      "pool_gone": "Dette bassenget er ikke lenger tilgjengelig på kontoen din."
+    },
     "error": {
-      "invalid_auth": "Autentisering mislyktes.",
-      "invalid_url": "Den oppgitte URL-en er ugyldig.",
-      "unknown": "En ukjent feil oppstod."
+      "invalid_auth": "Leslie's avviste e-postadressen eller passordet.",
+      "no_pools": "Denne kontoen har ingen registrerte basseng-profiler. Legg til et basseng på lesliespool.com og prøv igjen.",
+      "cannot_connect": "Kunne ikke nå Leslie's API. Sjekk nettverket og prøv igjen.",
+      "unknown": "En uventet feil oppstod. Sjekk Home Assistant-loggene."
     },
     "step": {
       "user": {
         "data": {
+          "email": "E-post",
           "password": "Passord",
-          "scan_interval": "Skanningsintervall (sekunder)",
-          "username": "Brukernavn",
-          "water_test_url": "Vanntest-URL"
+          "scan_interval": "Skanningsintervall (sekunder)"
         },
+        "description": "Logg inn med Leslie's Pool-kontoen din. Innloggingsinformasjonen brukes én gang for å hente basseng-listen din; deretter sendes kun kunde-ID-en ved datahentinger.",
         "title": "Leslie's Pool Vanntester"
+      },
+      "pick_pool": {
+        "data": {
+          "pool_profile_id": "Basseng"
+        },
+        "description": "Kontoen din har flere basseng. Velg hvilket denne integrasjonen skal følge.",
+        "title": "Velg et basseng"
       }
     }
   }

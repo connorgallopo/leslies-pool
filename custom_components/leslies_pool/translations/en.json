@@ -1,20 +1,31 @@
 {
   "config": {
+    "abort": {
+      "already_configured": "This Leslie's account is already configured.",
+      "pool_gone": "That pool is no longer available on your account."
+    },
     "error": {
-      "invalid_auth": "Authentication failed.",
-      "invalid_url": "The provided URL is invalid.",
-      "unknown": "An unknown error occurred."
+      "invalid_auth": "Leslie's rejected the email or password.",
+      "no_pools": "This account has no registered pool profiles. Add a pool at lesliespool.com first, then retry.",
+      "cannot_connect": "Couldn't reach Leslie's API. Check your network and try again.",
+      "unknown": "An unexpected error occurred. Check the Home Assistant logs."
     },
     "step": {
       "user": {
         "data": {
+          "email": "Email",
           "password": "Password",
-          "scan_interval": "Polling Interval (seconds)",
-          "username": "Username",
-          "water_test_url": "Water Test URL"
+          "scan_interval": "Polling Interval (seconds)"
         },
-        "description": "Set up your Leslie's Pool integration.",
+        "description": "Sign in with your Leslie's Pool account. Credentials are used once to look up your pool list; after that, only your customer ID is sent on data fetches.",
         "title": "Leslie's Pool Water Tests"
+      },
+      "pick_pool": {
+        "data": {
+          "pool_profile_id": "Pool"
+        },
+        "description": "Your account has more than one pool. Pick which one this integration should track.",
+        "title": "Pick a pool"
       }
     }
   }

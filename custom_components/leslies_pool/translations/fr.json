@@ -1,19 +1,31 @@
 {
   "config": {
+    "abort": {
+      "already_configured": "Ce compte Leslie's est déjà configuré.",
+      "pool_gone": "Cette piscine n'est plus disponible sur votre compte."
+    },
     "error": {
-      "invalid_auth": "Échec de l'authentification.",
-      "invalid_url": "L'URL fournie est invalide.",
-      "unknown": "Une erreur inconnue s'est produite."
+      "invalid_auth": "Leslie's a rejeté l'e-mail ou le mot de passe.",
+      "no_pools": "Ce compte n'a aucun profil de piscine enregistré. Ajoutez une piscine sur lesliespool.com puis réessayez.",
+      "cannot_connect": "Impossible de joindre l'API de Leslie's. Vérifiez votre réseau et réessayez.",
+      "unknown": "Une erreur inattendue s'est produite. Consultez les journaux Home Assistant."
     },
     "step": {
       "user": {
         "data": {
+          "email": "E-mail",
           "password": "Mot de passe",
-          "scan_interval": "Intervalle de balayage (secondes)",
-          "username": "Nom d'utilisateur",
-          "water_test_url": "URL du test de l'eau"
+          "scan_interval": "Intervalle de balayage (secondes)"
         },
+        "description": "Connectez-vous avec votre compte Leslie's Pool. Vos identifiants sont utilisés une seule fois pour récupérer la liste de vos piscines ; ensuite, seul l'identifiant client est envoyé lors des requêtes.",
         "title": "Tests de l'eau de Leslie's Pool"
+      },
+      "pick_pool": {
+        "data": {
+          "pool_profile_id": "Piscine"
+        },
+        "description": "Votre compte contient plusieurs piscines. Choisissez celle que cette intégration doit suivre.",
+        "title": "Choisir une piscine"
       }
     }
   }
